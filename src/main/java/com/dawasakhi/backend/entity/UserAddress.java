@@ -200,6 +200,31 @@ public class UserAddress extends BaseEntity {
     public void setPostalCode(String postalCode) {
         this.postalCode = postalCode;
     }
+    
+    // Additional getters/setters for compatibility
+    public String getPincode() {
+        return postalCode;
+    }
+
+    public void setPincode(String pincode) {
+        this.postalCode = pincode;
+    }
+    
+    public String getRecipientName() {
+        return fullName;
+    }
+
+    public void setRecipientName(String recipientName) {
+        this.fullName = recipientName;
+    }
+    
+    public String getRecipientPhone() {
+        return phoneNumber;
+    }
+
+    public void setRecipientPhone(String recipientPhone) {
+        this.phoneNumber = recipientPhone;
+    }
 
     public String getCountry() {
         return country;

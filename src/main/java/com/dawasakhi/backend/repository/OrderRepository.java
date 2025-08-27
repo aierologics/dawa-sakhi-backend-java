@@ -1,6 +1,7 @@
 package com.dawasakhi.backend.repository;
 
 import com.dawasakhi.backend.entity.Order;
+import com.dawasakhi.backend.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -104,4 +105,23 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "WHERE o.orderStatus = 'DELIVERED' " +
            "GROUP BY o.deliveryType")
     List<Object[]> getDeliveryTypeStats();
+    
+    // Additional methods needed by services
+    Optional<Order> findByOrderNumberAndCustomer(String orderNumber, User customer);
+    
+    Page<Order> findByCustomer(User customer, Pageable pageable);
+    
+    Page<Order> findByOrderStatus(Order.OrderStatus orderStatus, Pageable pageable);
+    
+    List<Order> findByDeliveryAddressPincodeAndOrderStatus(String pincode, Order.OrderStatus orderStatus);
+    
+    List<Order> findByOrderStatusOrderByCreatedAtAsc(Order.OrderStatus orderStatus);
+    
+    List<Order> findByOrderStatusAndActualDeliveryTimeBetween(Order.OrderStatus orderStatus, LocalDateTime fromDate, LocalDateTime toDate);
+    
+    List<Order> findByDeliveryAddressPincodeAndCreatedAtBetween(String pincode, LocalDateTime fromDate, LocalDateTime toDate);
+    
+    List<Order> findByCreatedAtBetween(LocalDateTime fromDate, LocalDateTime toDate);
+    
+    List<Order> findByOrderStatusAndEstimatedDeliveryTimeBefore(Order.OrderStatus orderStatus, LocalDateTime dateTime);
 }

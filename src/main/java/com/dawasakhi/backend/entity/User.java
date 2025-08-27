@@ -104,7 +104,7 @@ public class User extends BaseEntity {
     }
 
     public enum UserRole {
-        CUSTOMER, PHARMACY, DELIVERY, ADMIN
+        CUSTOMER, PHARMACY, DELIVERY_AGENT, ADMIN
     }
 
     public enum AccountStatus {

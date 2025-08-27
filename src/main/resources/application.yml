@@ -103,13 +103,24 @@ jwt:
 
 # External Services Configuration
 twilio:
-  account-sid: ${TWILIO_ACCOUNT_SID:}
-  auth-token: ${TWILIO_AUTH_TOKEN:}
-  phone-number: ${TWILIO_PHONE_NUMBER:}
+  account:
+    sid: ${TWILIO_ACCOUNT_SID:}
+  auth:
+    token: ${TWILIO_AUTH_TOKEN:}
+  phone:
+    number: ${TWILIO_PHONE_NUMBER:}
 
 razorpay:
-  key-id: ${RAZORPAY_KEY_ID:}
-  key-secret: ${RAZORPAY_KEY_SECRET:}
+  key:
+    id: ${RAZORPAY_KEY_ID:}
+    secret: ${RAZORPAY_KEY_SECRET:}
+
+# App Configuration
+app:
+  name: DawaSakhi
+  version: 1.0.0
+  sms:
+    enabled: ${SMS_ENABLED:true}
 
 # File Upload Configuration
 upload:
