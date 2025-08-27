@@ -1,0 +1,35 @@
+spring:
+  # Development Database Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Development specific configurations
+  devtools:
+    livereload:
+      enabled: true
+    restart:
+      enabled: true
+
+# Development logging
+logging:
+  level:
+    com.dawasure: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# Development mode flags
+external-services:
+  development-mode: true
+  mock-responses: true
+
+# Relaxed security for development
+security:
+  rate-limit:
+    enabled: false  # Disable rate limiting in development
