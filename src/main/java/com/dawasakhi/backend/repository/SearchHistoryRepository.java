@@ -1,97 +1,69 @@
 package com.dawasakhi.backend.repository;
 
 import com.dawasakhi.backend.entity.SearchHistory;
+import com.dawasakhi.backend.entity.User;
+import com.dawasakhi.backend.service.SearchHistoryService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.mongodb.repository.Aggregation;
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
-public interface SearchHistoryRepository extends MongoRepository<SearchHistory, String> {
+public interface SearchHistoryRepository extends JpaRepository<SearchHistory, Long> {
 
-    Page<SearchHistory> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    Page<SearchHistory> findByUser(User user, Pageable pageable);
     
-    List<SearchHistory> findByUserIdAndSearchQueryOrderByCreatedAtDesc(Long userId, String searchQuery);
+    Optional<SearchHistory> findByUserAndSearchTermAndCreatedAtAfter(User user, String searchTerm, LocalDateTime afterTime);
     
-    @Query("{'userId': ?0, 'createdAt': {'$gte': ?1}}")
-    Page<SearchHistory> findByUserIdAndCreatedAtAfter(Long userId, LocalDateTime fromDate, Pageable pageable);
+    @Query("SELECT sh.searchTerm FROM SearchHistory sh WHERE sh.user = :user GROUP BY sh.searchTerm ORDER BY SUM(sh.searchCount) DESC")
+    List<String> findTopSearchTermsByUser(@Param("user") User user, Pageable pageable);
     
-    @Query("{'searchQuery': {'$regex': ?0, '$options': 'i'}}")
-    Page<SearchHistory> findBySearchQueryContainingIgnoreCase(String searchTerm, Pageable pageable);
+    @Query("SELECT sh.searchTerm FROM SearchHistory sh WHERE sh.user = :user ORDER BY sh.createdAt DESC")
+    List<String> findRecentSearchTermsByUser(@Param("user") User user, Pageable pageable);
     
-    @Query("{'createdAt': {'$gte': ?0, '$lte': ?1}}")
-    List<SearchHistory> findByCreatedAtBetween(LocalDateTime fromDate, LocalDateTime toDate);
+    @Query("SELECT sh.searchTerm FROM SearchHistory sh WHERE sh.createdAt >= :fromDate GROUP BY sh.searchTerm ORDER BY SUM(sh.searchCount) DESC")
+    List<String> findTrendingSearchTerms(@Param("fromDate") LocalDateTime fromDate, Pageable pageable);
     
-    @Query("{'userId': ?0, 'clickedMedicineId': {'$ne': null}}")
-    List<SearchHistory> findByUserIdWithClicks(Long userId);
+    @Query("SELECT sh.searchTerm FROM SearchHistory sh GROUP BY sh.searchTerm ORDER BY SUM(sh.searchCount) DESC")
+    List<String> findPopularSearchTerms(Pageable pageable);
     
-    long countByUserId(Long userId);
+    @Query("SELECT sh.searchTerm FROM SearchHistory sh WHERE sh.user = :user AND sh.searchTerm ILIKE %:query% ORDER BY sh.searchCount DESC, sh.createdAt DESC")
+    List<String> findUserSearchSuggestions(@Param("user") User user, @Param("query") String query, Pageable pageable);
     
-    long countBySearchQuery(String searchQuery);
+    @Query("SELECT sh.searchTerm FROM SearchHistory sh WHERE sh.searchTerm ILIKE %:query% GROUP BY sh.searchTerm ORDER BY SUM(sh.searchCount) DESC")
+    List<String> findGlobalSearchSuggestions(@Param("query") String query, Pageable pageable);
     
-    @Query(value = "{'createdAt': {'$gte': ?0}}", count = true)
-    long countSearchesSince(LocalDateTime fromDate);
+    void deleteByUser(User user);
     
-    // Aggregation queries for analytics
-    @Aggregation(pipeline = {
-        "{ '$match': { 'createdAt': { '$gte': ?0 } } }",
-        "{ '$group': { '_id': '$searchQuery', 'count': { '$sum': 1 }, 'avgResults': { '$avg': '$resultsCount' } } }",
-        "{ '$sort': { 'count': -1 } }",
-        "{ '$limit': ?1 }"
-    })
-    List<PopularSearch> getPopularSearches(LocalDateTime fromDate, int limit);
+    long countByUserAndCreatedAtBetween(User user, LocalDateTime fromDate, LocalDateTime toDate);
     
-    @Aggregation(pipeline = {
-        "{ '$match': { 'userId': ?0 } }",
-        "{ '$group': { '_id': '$searchQuery', 'count': { '$sum': 1 }, 'lastSearched': { '$max': '$createdAt' } } }",
-        "{ '$sort': { 'lastSearched': -1 } }",
-        "{ '$limit': ?1 }"
-    })
-    List<UserSearchHistory> getUserRecentSearches(Long userId, int limit);
+    @Query("SELECT COUNT(DISTINCT sh.searchTerm) FROM SearchHistory sh WHERE sh.user = :user AND sh.createdAt BETWEEN :fromDate AND :toDate")
+    long countDistinctSearchTermsByUserAndDateRange(@Param("user") User user, @Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
     
-    @Aggregation(pipeline = {
-        "{ '$match': { 'createdAt': { '$gte': ?0 } } }",
-        "{ '$group': { '_id': { '$dateToString': { 'format': '%Y-%m-%d', 'date': '$createdAt' } }, 'totalSearches': { '$sum': 1 }, 'uniqueUsers': { '$addToSet': '$userId' } } }",
-        "{ '$project': { 'date': '$_id', 'totalSearches': 1, 'uniqueUsers': { '$size': '$uniqueUsers' } } }",
-        "{ '$sort': { 'date': 1 } }"
-    })
-    List<DailySearchStats> getDailySearchStats(LocalDateTime fromDate);
+    long countByUserAndSearchTypeAndCreatedAtBetween(User user, SearchHistory.SearchType searchType, LocalDateTime fromDate, LocalDateTime toDate);
     
-    @Aggregation(pipeline = {
-        "{ '$match': { 'clickedMedicineId': { '$ne': null } } }",
-        "{ '$group': { '_id': '$clickedMedicineId', 'clickCount': { '$sum': 1 }, 'searchQueries': { '$addToSet': '$searchQuery' } } }",
-        "{ '$sort': { 'clickCount': -1 } }",
-        "{ '$limit': ?0 }"
-    })
-    List<PopularMedicine> getMostClickedMedicines(int limit);
+    long countByCreatedAtBetween(LocalDateTime fromDate, LocalDateTime toDate);
     
-    // Interface for aggregation results
-    interface PopularSearch {
-        String getId(); // search query
-        long getCount();
-        double getAvgResults();
-    }
+    @Query("SELECT COUNT(DISTINCT sh.user) FROM SearchHistory sh WHERE sh.createdAt BETWEEN :fromDate AND :toDate")
+    long countDistinctUsersByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
     
-    interface UserSearchHistory {
-        String getId(); // search query
-        long getCount();
-        LocalDateTime getLastSearched();
-    }
+    @Query("SELECT COUNT(DISTINCT sh.searchTerm) FROM SearchHistory sh WHERE sh.createdAt BETWEEN :fromDate AND :toDate")
+    long countDistinctSearchTermsByDateRange(@Param("fromDate") LocalDateTime fromDate, @Param("toDate") LocalDateTime toDate);
     
-    interface DailySearchStats {
-        String getDate();
-        long getTotalSearches();
-        long getUniqueUsers();
-    }
+    long countBySearchTypeAndCreatedAtBetween(SearchHistory.SearchType searchType, LocalDateTime fromDate, LocalDateTime toDate);
     
-    interface PopularMedicine {
-        Long getId(); // medicine id
-        long getClickCount();
-        List<String> getSearchQueries();
-    }
+    @Query("SELECT new com.dawasakhi.backend.service.SearchHistoryService$SearchTrendData(sh.searchTerm, SUM(sh.searchCount), MAX(sh.createdAt)) " +
+           "FROM SearchHistory sh WHERE sh.createdAt >= :fromDate " +
+           "GROUP BY sh.searchTerm ORDER BY SUM(sh.searchCount) DESC")
+    List<SearchHistoryService.SearchTrendData> findSearchTrends(@Param("fromDate") LocalDateTime fromDate, Pageable pageable);
+    
+    boolean existsByUserAndSearchTerm(User user, String searchTerm);
+    
+    long countByUser(User user);
 }

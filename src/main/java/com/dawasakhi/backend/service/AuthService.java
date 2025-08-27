@@ -47,6 +47,9 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private SmsService smsService;
+
     @Value("${jwt.access-expiry}")
     private long accessTokenExpiry;
 
@@ -62,9 +65,15 @@ public class AuthService {
             throw new ValidationException(result.getError(), "OTP_GENERATION_FAILED");
         }
         
-        // TODO: Send SMS via Twilio or other SMS service
-        // For now, just log the OTP for development
-        logger.info("OTP generated successfully for phone: {} - OTP: {}", phoneNumber, result.getOtp());
+        // Send SMS via Twilio
+        try {
+            smsService.sendOtp(phoneNumber, result.getOtp());
+            logger.info("OTP sent successfully to phone: {}", phoneNumber);
+        } catch (Exception e) {
+            logger.error("Failed to send OTP SMS to phone: {} - Error: {}", phoneNumber, e.getMessage());
+            // Don't fail the request if SMS fails, just log the OTP for development
+            logger.info("OTP generated for phone: {} - OTP: {}", phoneNumber, result.getOtp());
+        }
     }
 
     public AuthResponse login(LoginRequest request) {

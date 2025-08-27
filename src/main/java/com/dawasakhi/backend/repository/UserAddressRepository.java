@@ -1,5 +1,6 @@
 package com.dawasakhi.backend.repository;
 
+import com.dawasakhi.backend.entity.User;
 import com.dawasakhi.backend.entity.UserAddress;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -48,4 +49,13 @@ public interface UserAddressRepository extends JpaRepository<UserAddress, Long> 
     void softDeleteAddress(@Param("addressId") Long addressId, @Param("userId") Long userId);
     
     boolean existsByUserUserIdAndIsDefaultTrueAndIsActiveTrue(Long userId);
+    
+    // Additional methods needed by services
+    List<UserAddress> findByUserOrderByIsDefaultDescCreatedAtAsc(User user);
+    
+    List<UserAddress> findByUser(User user);
+    
+    Optional<UserAddress> findByUserAndIsDefaultTrue(User user);
+    
+    List<UserAddress> findByPincode(String pincode);
 }
